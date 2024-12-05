@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Audio Buttons</title>
+  <style>
+    body {
+      margin: 0;
+      display: flex;
+      justify-content: center;  /* Center horizontally */
+      align-items: center;      /* Center vertically */
+      height: 100vh;            /* Full viewport height */
+      background-color: #f0f0f0;
+    }
+    .container {
+      display: flex;
+      flex-direction: column-reverse; /* Stack buttons from bottom to top */
+      width: 60px; /* Fixed width for the container */
+      height: 75vh; /* Fixed height for the container */
+      align-items: center; /* Center buttons horizontally */
+      border: 2px solid red; /* Border for visibility */
+      overflow: hidden; /* Hide overflow if it happens */
+    }
+    .button {
+      width: 100%; /* Buttons take up the full width of the container */
+      background: transparent; /* Make the button completely transparent */
+      border: 1px solid black; /* Add a black border to the button */
+      cursor: pointer; /* Show pointer cursor on hover */
+      user-select: none; /* Prevent text selection */
+      box-sizing: border-box; /* Ensure padding and border don't affect the width */
+    }
+  </style>
+</head>
+<body>
+  <div class="container" id="buttonContainer"></div>
+
+  <script>
+    const buttonCount = 49; // Set the number of buttons here
+    const audioFiles = Array.from({ length: buttonCount }, (_, i) => `TRACKA${String(i + 1).padStart(2, '0')}.ogg`);
+
+    const container = document.getElementById('buttonContainer');
+    let isDragging = false;
+    let lastActiveButton = null;
+    const audioElements = {};  // Object to store audio elements
+
+    // Dynamically generate buttons
+    audioFiles.forEach((audioFile, index) => {
+      const button = document.createElement('div');
+      button.className = 'button';
+      button.dataset.sound = index + 1; // Store sound data for each button
+      container.appendChild(button);  // No text content, just buttons
+    });
+
+    // Function to get or create audio element
+    function getAudioElement(buttonNumber) {
+      if (!audioElements[buttonNumber]) {
+        // Create new audio element if it doesn't exist
+        const audio = new Audio(`TRACKA${String(buttonNumber).padStart(2, '0')}.ogg`);
+        audioElements[buttonNumber] = audio; // Store it for reuse
+      }
+      return audioElements[buttonNumber];
+    }
+
+    // Function to play a sound from the beginning
+    function playSound(buttonNumber) {
+      const audio = getAudioElement(buttonNumber);
+      audio.currentTime = 0; // Reset the audio to the start
+      audio.play(); // Play the sound
+    }
+
+    // Function to get the target element from touch or mouse event
+    function getInteractionTarget(event) {
+      const { clientX, clientY } = event.type.includes('mouse') ? event : event.targetTouches[0];
+      return document.elementFromPoint(clientX, clientY);
+    }
+
+    // General handler for short tap and drag
+    function handleInteraction(event) {
+      const target = event.target;
+      if (target && target.classList.contains('button')) {
+        const buttonNumber = target.getAttribute('data-sound');
+        playSound(buttonNumber); // Play a new instance of the sound
+        lastActiveButton = target; // Track the last active button
+      }
+    }
+
+    // Handle drag interaction, ensuring new instance of sound plays when moving across buttons
+    function handleDrag(event) {
+      const target = getInteractionTarget(event);
+
+      if (target && target.classList.contains('button') && target !== lastActiveButton) {
+        const buttonNumber = target.getAttribute('data-sound');
+        playSound(buttonNumber); // Play a new instance of the sound
+        lastActiveButton = target; // Update the last active button
+      }
+    }
+
+    // General event delegation to handle both mouse and touch events
+    document.addEventListener('mousedown', () => { isDragging = true; lastActiveButton = null; });
+    document.addEventListener('mousemove', (e) => { if (isDragging) handleDrag(e); });
+    document.addEventListener('mouseup', () => { isDragging = false; lastActiveButton = null; });
+    document.addEventListener('touchstart', () => { isDragging = true; lastActiveButton = null; });
+    document.addEventListener('touchmove', (e) => { if (isDragging) handleDrag(e); });
+    document.addEventListener('touchend', () => { isDragging = false; lastActiveButton = null; });
+
+    // Handle tap event for both mouse and touch
+    document.addEventListener('mousedown', handleInteraction);
+    document.addEventListener('touchstart', handleInteraction);
+
+    // Function to adjust button size based on the container height and button count
+    function adjustButtonSize() {
+      const containerHeight = document.querySelector('.container').offsetHeight;
+      const buttons = document.querySelectorAll('.button');
+      const totalHeight = containerHeight; // No gap, use full height for buttons
+      const buttonHeight = totalHeight / buttons.length; // Distribute height equally among buttons
+
+      // Set dynamic height for buttons
+      buttons.forEach(button => {
+        button.style.height = `${buttonHeight}px`; // Set the calculated height for each button
+      });
+    }
+
+    // Call adjustButtonSize once after the buttons are generated
+    adjustButtonSize();
+
+    // Adjust button size again if the window is resized
+    window.addEventListener('resize', adjustButtonSize);
+
+  </script>
+</body>
+</html>
